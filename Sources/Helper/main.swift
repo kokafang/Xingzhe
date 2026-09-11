@@ -98,7 +98,10 @@ final class Session: NSObject, AwakeService {
                 }
                 try engine.renew(owner: self.id, now: ProcessInfo.processInfo.systemUptime)
                 reply(true, "")
-            } catch { reply(false, error.localizedDescription) }
+            } catch {
+                NSLog("保持清醒心跳结束：%@", error.localizedDescription)
+                reply(false, error.localizedDescription)
+            }
         }
     }
     func status(reply: @escaping (Bool, String) -> Void) {

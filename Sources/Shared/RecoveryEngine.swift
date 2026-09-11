@@ -70,9 +70,23 @@ final class RecoveryEngine {
             try recover()
             throw AwakeError(text: "连接超时，已恢复原设置。")
         }
-        guard try backend.readDisabled() else {
-            try recover()
-            throw AwakeError(text: "系统休眠设置已被其他程序更改。")
+        do {
+            if try !backend.readDisabled() {
+                // Other power utilities may reset this global setting. While the
+                // user's lease is valid, preserve their explicit enabled intent.
+                // Do not replace the journal: it still holds the pre-enable value.
+                try backend.writeDisabled(true)
+                guard try backend.readDisabled() else {
+                    throw AwakeError(text: "防休眠设置被其他程序更改，重新应用未成功。")
+                }
+                NSLog("检测到外部电源设置重置，已重新应用保持清醒。")
+            }
+        } catch {
+            let failure = error
+            do { try recover() } catch {
+                throw AwakeError(text: "保持清醒失败；恢复也未完成：\(error.localizedDescription)")
+            }
+            throw failure
         }
         expiresAt = now + 20
     }

@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var waitingForApproval = false
     private var lastReply = Date.distantPast
     private var generation = 0
+    private var lastDiagnostic = ""
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -70,6 +71,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func render(_ message: String? = nil) {
+        if let message, !message.isEmpty, message != lastDiagnostic {
+            NSLog("醒着状态：%@", message)
+        }
+        lastDiagnostic = message ?? ""
         toggle.state = enabled ? .on : .off
         toggle.isEnabled = !busy
         statusItem.button?.image = NSImage(systemSymbolName: enabled ? "sun.max.fill" : "moon.zzz",

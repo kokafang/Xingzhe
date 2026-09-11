@@ -6,11 +6,13 @@ final class Fake: PowerBackend {
     var failWrite = false
     var failSave = false
     var failClear = false
+    var ignoreEnableWrite = false
     var writes: [Bool] = []
     func readDisabled() throws -> Bool { disabled }
     func writeDisabled(_ value: Bool) throws {
         if failWrite { throw AwakeError(text: "write failed") }
-        writes.append(value); disabled = value
+        writes.append(value)
+        if !(ignoreEnableWrite && value) { disabled = value }
     }
     func readJournal() throws -> Bool? { journal }
     func saveJournal(_ value: Bool) throws {
@@ -73,10 +75,54 @@ test("failed recovery never clears journal") {
     throwsError { try e.disable(owner: id) }; expect(b.journal == false && !e.lastError.isEmpty)
     b.failWrite = false; e.tick(now: 1); expect(b.journal == nil && e.lastError.isEmpty)
 }
-test("changed system state terminates lease") {
+test("external reset is repaired without ending the active session") {
     let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
     try e.enable(owner: id, now: 0); b.disabled = false
-    throwsError { try e.renew(owner: id, now: 1) }; expect(!e.active && b.journal == nil)
+    try e.renew(owner: id, now: 15)
+    expect(e.owner == id && b.disabled && b.journal == false)
+    e.tick(now: 21); expect(e.active)
+    try e.disable(owner: id); expect(!b.disabled && b.journal == nil)
+}
+test("repeated external resets preserve the original recovery value") {
+    let b = Fake(); b.disabled = true; let e = RecoveryEngine(backend: b); let id = UUID()
+    try e.enable(owner: id, now: 0)
+    for now in [5.0, 10.0, 15.0] {
+        b.disabled = false; try e.renew(owner: id, now: now)
+        expect(e.active && b.disabled && b.journal == true)
+    }
+    e.disconnected(owner: id); expect(!e.active && b.disabled && b.journal == nil)
+}
+test("expired session cannot reapply sleep prevention") {
+    let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
+    try e.enable(owner: id, now: 0); b.disabled = false; b.writes = []
+    throwsError { try e.renew(owner: id, now: 20) }
+    expect(!e.active && !b.disabled && !b.writes.contains(true))
+}
+test("another session cannot reapply sleep prevention") {
+    let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
+    try e.enable(owner: id, now: 0); b.disabled = false; b.writes = []
+    throwsError { try e.renew(owner: UUID(), now: 5) }
+    expect(e.owner == id && !b.disabled && b.writes.isEmpty)
+}
+test("failed reapplication ends the session and retains recovery for retry") {
+    let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
+    try e.enable(owner: id, now: 0); b.disabled = false; b.failWrite = true
+    throwsError { try e.renew(owner: id, now: 5) }
+    expect(!e.active && b.journal == false && !e.lastError.isEmpty)
+    b.failWrite = false; e.tick(now: 6)
+    expect(!b.disabled && b.journal == nil && e.lastError.isEmpty)
+}
+test("unverified reapplication cannot report success") {
+    let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
+    try e.enable(owner: id, now: 0); b.disabled = false; b.ignoreEnableWrite = true
+    throwsError { try e.renew(owner: id, now: 5) }
+    expect(!e.active && !b.disabled && b.journal == nil)
+}
+test("unchanged settings require no extra writes") {
+    let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
+    try e.enable(owner: id, now: 0); b.writes = []
+    try e.renew(owner: id, now: 5)
+    expect(e.active && b.writes.isEmpty && b.journal == false)
 }
 test("journal clear failure is retried safely") {
     let b = Fake(); let e = RecoveryEngine(backend: b); let id = UUID()
