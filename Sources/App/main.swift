@@ -7,6 +7,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let detail = NSTextField(wrappingLabelWithString: "已关闭 · 使用原有系统设置")
     private let client = ServiceClient()
     private let idle = IdleGuard()
+    private let registration = HelperRegistration()
+    private let updates = UpdateController()
+    private lazy var updatePreparation = UpdatePreparation { [weak self] reply in
+        guard let self else { reply(true, "应用已退出。"); return }
+        if self.daemon.status == .notRegistered || self.daemon.status == .notFound {
+            reply(false, self.registration.wasRegistered ? "请先重新启用后台服务，再重试更新。" : "")
+        } else if self.daemon.status == .enabled {
+            self.client.request("set", enabled: false, completion: reply)
+        } else {
+            reply(true, "请先在系统设置中批准后台服务，再重试更新。")
+        }
+    }
     private let daemon = SMAppService.daemon(plistName: daemonPlist)
     private var enabled = false
     private var busy = false
@@ -48,6 +60,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         timer = Timer(timeInterval: ServiceTiming.heartbeatInterval, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(timer!, forMode: .common)
+        updates.canStartCheck = { [weak self] in self?.busy == false }
+        busy = true
+        render("正在检查后台服务…")
+        registration.ensureCurrent { [weak self] error in
+            guard let self else { return }
+            self.busy = false
+            self.waitingForApproval = self.daemon.status == .requiresApproval
+            self.render(error)
+            self.updates.start()
+        }
     }
 
     private func buildMenu() {
@@ -67,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controls = NSMenuItem(); controls.view = root
         menu.addItem(controls)
         menu.addItem(.separator())
+        updates.appendMenuItems(to: menu)
         let quit = NSMenuItem(title: "退出醒着", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self; menu.addItem(quit)
         statusItem.menu = menu
@@ -99,7 +122,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             guard daemon.status == .enabled else { throw AwakeError(text: "后台服务未启用，请在系统设置中批准。") }
-            change(true)
+            busy = true
+            render("正在检查后台服务…")
+            registration.ensureCurrent { [weak self] error in
+                guard let self else { return }
+                self.busy = false
+                if let error {
+                    self.waitingForApproval = self.daemon.status == .requiresApproval
+                    self.render(error)
+                } else { self.change(true) }
+            }
         } catch { render(error.localizedDescription) }
     }
 
@@ -116,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, self.generation == current else { return }
             self.busy = false; self.enabled = active; self.lastReply = ProcessInfo.processInfo.systemUptime
             if !active { self.idle.stop() }
+            if active && message.isEmpty { self.registration.markCurrent() }
             self.render(message.isEmpty ? nil : message)
         }
     }
@@ -147,6 +180,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func quitApp() { NSApp.terminate(nil) }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard statusItem != nil else { return .terminateNow }
+        guard !registration.isRepairing else { return .terminateCancel }
+        if updates.installingUpdate || daemon.status == .enabled {
+            generation += 1
+            busy = true; heartbeatPending = false
+            idle.stop(); enabled = false
+            render(updates.installingUpdate ? "更新前正在恢复原设置…" : "正在恢复原设置…")
+            updatePreparation.run { [weak self] allowed, message in
+                // A never-registered helper can reply synchronously. Reply to
+                // AppKit only after this method has returned terminateLater.
+                DispatchQueue.main.async {
+                    guard let self else { NSApp.reply(toApplicationShouldTerminate: false); return }
+                    self.client.disconnect()
+                    self.busy = false
+                    if allowed { self.timer?.invalidate() }
+                    else { self.render("恢复尚未完成 · 已暂停退出") }
+                    NSApp.reply(toApplicationShouldTerminate: allowed)
+                    if !allowed { self.updates.showRecoveryFailure(message, forUpdate: self.updates.installingUpdate) }
+                }
+            }
+            return .terminateLater
+        }
         generation += 1
         idle.stop(); timer?.invalidate()
         if !enabled { client.disconnect(); return .terminateNow }

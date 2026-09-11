@@ -25,6 +25,14 @@ If the first launch is blocked because the developer cannot be verified, follow 
 
 The sun icon means Keep Awake is enabled; the moon means it is disabled. The app requests login startup on its first launch, but **Keep Awake starts off each time the app launches**. Turn it off and quit the app before removing it.
 
+## Updates
+
+Click **检查更新…** (Check for Updates) in the menu bar menu. You can also enable **自动检查更新** for daily checks. Xingzhe asks before enabling automatic checks and before installing; automatic downloads and silent installation are disabled.
+
+The updater shows release notes and progress, verifies the signed feed and archive, then installs and restarts. Before quitting, Xingzhe confirms that the helper restored the original power setting. Failed restoration pauses installation. After restart, Keep Awake is off and the helper is refreshed automatically if the app signature changed. macOS may still request background-service approval.
+
+Versions 1.0.2 and older need one manual upgrade to 1.1.0. Later upgrades can be installed from within the app.
+
 ## What it does
 
 - Prevents system sleep while Keep Awake is enabled and uses temporary IOKit assertions to keep the display active and suppress idle locking.
@@ -46,7 +54,7 @@ bash scripts/build.sh
 python3 scripts/test-launch-path.py
 ```
 
-The app is generated at `build/醒着.app`. The build runs recovery and local-XPC timeout tests, compiles the app and helper, signs them locally, and validates the signatures and property lists. It has no third-party runtime dependencies.
+The app is generated at `build/醒着.app`. The build runs recovery and local-XPC timeout tests, compiles the app and helper, signs them locally, and validates the signatures and property lists. Sparkle 2.9.6 is bundled for signed updates; its official distribution is downloaded and checksum-verified by the build script.
 
 Create a shareable ZIP with the app, documentation, license notices, and a SHA-256 checksum:
 
@@ -54,7 +62,7 @@ Create a shareable ZIP with the app, documentation, license notices, and a SHA-2
 bash scripts/package-release.sh
 ```
 
-Output: `build/releases/Xingzhe-1.0.2-macOS-arm64.zip` and `build/releases/SHA256SUMS.txt`.
+Output: `build/releases/1.1.0/Xingzhe-1.1.0-macOS-arm64.zip` and `build/releases/1.1.0/SHA256SUMS.txt`. Release signing requires the maintainer’s Sparkle signing key in the login Keychain.
 
 ## How it works
 
@@ -74,3 +82,11 @@ Before changing `SleepDisabled`, the helper stores the original value in a recov
 ## License
 
 The source code is licensed under the [MIT License](LICENSE). The supplied application artwork is excluded from that license; see [NOTICE](NOTICE).
+
+## Maintainer release workflow
+
+The original project's EdDSA key lives in the maintainer's login Keychain under the Sparkle account `local.xingzhe.awake`. Never commit or upload a private key. For a fork, generate your own key with `build/dependencies/Sparkle-2.9.6/bin/generate_keys --account YOUR_ACCOUNT` and change the feed URL, public key and signing account in the scripts.
+
+Increment both version fields in `Resources/Info.plist`, add `updates/release-notes/VERSION.html`, update the changelog, and commit/merge the reviewed changes to `main`. Run `bash scripts/publish-release.sh`. It builds, signs and verifies the update, publishes immutable release assets, verifies their hashes, and only then commits the signed feed. A failed publication must not be repaired by editing signed XML or overwriting an existing ZIP; restore the matching signed feed asset or publish a new version.
+
+Run `python3 scripts/test-updates.py` on the signing Mac for isolated end-to-end Sparkle tests. Test applications do not register the production helper or change power settings. See [third-party notices](THIRD_PARTY_NOTICES.md).

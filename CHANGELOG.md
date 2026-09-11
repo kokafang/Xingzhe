@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+- Add in-app update checks, version display, and an optional daily automatic-check setting using Sparkle 2.9.6.
+- Show release notes and download progress; install and restart only with user approval.
+- Verify signed feeds and EdDSA update archives before extraction.
+- Confirm power restoration before exiting for installation; refuse termination when recovery fails.
+- Refresh the authenticated helper after an app signature change so the new app can connect after updating.
+- Publish signed app-only ZIPs and an update feed after release assets are available.
+
 ## 1.0.2
 
 - Use adaptive scheduling and a user-initiated power queue for the helper instead of a throttled background process.

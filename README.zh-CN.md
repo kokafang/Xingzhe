@@ -23,6 +23,14 @@
 
 首次运行会申请登录自启动，但每次启动时「保持清醒」默认关闭。删除应用前，请先关闭开关并退出。
 
+## 应用内更新
+
+在顶部菜单点击「检查更新…」，也可以开启「自动检查更新」，每天检查一次。首次会询问是否允许自动检查；是否安装由你决定，不会静默下载安装。
+
+发现新版后展示更新说明和下载进度。更新信息与安装包均经过签名验证。安装前确认恢复原电源设置，恢复失败会暂停退出；重启后保持清醒默认关闭，并自动刷新后台服务。系统仍可能要求批准后台服务。
+
+1.0.2 及更早版本需要先手动安装一次 1.1.0；之后可在应用内完成更新。
+
 ## 工作方式
 
 开启时通过系统电源设置禁止睡眠，并使用临时 IOKit 断言抑制显示器空闲休眠与自动锁屏。它不会修改密码设置，也不会解锁手动锁屏。
@@ -46,7 +54,7 @@ bash scripts/build.sh
 python3 scripts/test-launch-path.py
 ```
 
-产物是 `build/醒着.app`。构建包含恢复逻辑和本地 XPC 超时测试、应用和后台编译、代码签名及 plist 校验，无第三方运行时依赖。
+产物是 `build/醒着.app`。构建包含恢复逻辑和本地 XPC 超时测试、应用和后台编译、代码签名及 plist 校验，更新框架 Sparkle 2.9.6 随应用打包；构建脚本会下载并校验官方发行包。
 
 生成包含应用、说明和许可证的分享包：
 
@@ -54,7 +62,7 @@ python3 scripts/test-launch-path.py
 bash scripts/package-release.sh
 ```
 
-产物是 `build/releases/Xingzhe-1.0.2-macOS-arm64.zip`，同目录下有 SHA-256 校验文件 `SHA256SUMS.txt`。
+产物是 `build/releases/1.1.0/Xingzhe-1.1.0-macOS-arm64.zip`，同目录下有 SHA-256 校验文件 `SHA256SUMS.txt` 和签名后的 `appcast.xml`。发布打包需要维护者本机钥匙串中的更新签名密钥。
 
 ## 项目结构
 
@@ -68,3 +76,11 @@ bash scripts/package-release.sh
 ## 许可证
 
 源代码采用 [MIT License](LICENSE)。应用图片素材不包含在源码许可证中，详见 [NOTICE](NOTICE)。
+
+## 维护者发布
+
+更新私钥只保存在本机登录钥匙串，Sparkle 账户为 `local.xingzhe.awake`；不得提交或上传私钥。Fork 项目需生成自己的密钥，并更换更新源、公钥和脚本中的签名账户。
+
+递增 `Resources/Info.plist` 两个版本号，添加 `updates/release-notes/版本号.html`，更新日志并提交合并到 `main`，然后运行 `bash scripts/publish-release.sh`。脚本先发布并核验安装包，再提交签名更新源。已有版本不得覆盖安装包或手工修改签名 XML；发布中断时应恢复匹配的签名更新源附件，或发布新版本。
+
+在有签名密钥的本机运行 `python3 scripts/test-updates.py` 可测试真实下载、签名验证、替换和重启。隔离测试应用不会注册正式后台服务，也不会修改系统电源设置。第三方许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
