@@ -21,7 +21,7 @@ git push --atomic origin main "refs/tags/$TAG"
 # Keep the unmodified signed feed as a release asset for recovery/republication.
 gh release create "$TAG" --repo kokafang/Xingzhe --verify-tag --title "Xingzhe $VERSION" \
     --notes-file "updates/release-notes/$VERSION.html" \
-    "$RELEASE_DIR/Xingzhe-$VERSION-macOS-arm64.zip" "$RELEASE_DIR/SHA256SUMS.txt" "$RELEASE_DIR/appcast.xml"
+    "build/releases/$VERSION/Xingzhe-$VERSION-macOS-arm64.zip" "build/releases/$VERSION/SHA256SUMS.txt" "build/releases/$VERSION/appcast.xml"
 gh api "repos/kokafang/Xingzhe/releases/tags/$TAG" > "$RELEASE_DIR/published-release.json"
 python3 - "$RELEASE_DIR" <<'PY'
 import hashlib, json, pathlib, sys
