@@ -46,7 +46,7 @@ bash scripts/build.sh
 python3 scripts/test-launch-path.py
 ```
 
-The app is generated at `build/醒着.app`. The build runs the recovery tests, compiles the app and helper, signs them locally, and validates the signatures and property lists. It has no third-party runtime dependencies.
+The app is generated at `build/醒着.app`. The build runs recovery and local-XPC timeout tests, compiles the app and helper, signs them locally, and validates the signatures and property lists. It has no third-party runtime dependencies.
 
 Create a shareable ZIP with the app, documentation, license notices, and a SHA-256 checksum:
 
@@ -54,13 +54,13 @@ Create a shareable ZIP with the app, documentation, license notices, and a SHA-2
 bash scripts/package-release.sh
 ```
 
-Output: `build/releases/Xingzhe-1.0.1-macOS-arm64.zip` and `build/releases/SHA256SUMS.txt`.
+Output: `build/releases/Xingzhe-1.0.2-macOS-arm64.zip` and `build/releases/SHA256SUMS.txt`.
 
 ## How it works
 
 The AppKit menu bar app communicates with an authenticated privileged helper over NSXPC. The helper is registered with `SMAppService` and runs fixed `pmset` operations; it does not accept arbitrary commands or file paths. Both ends validate code signatures.
 
-Before changing `SleepDisabled`, the helper stores the original value in a recovery journal. A session renews its lease every five seconds. The helper restores the original value when that session ends or expires. Temporary display and user-activity assertions live in the app process.
+Before changing `SleepDisabled`, the helper stores the original value in a recovery journal. A session sends a heartbeat every five seconds, with at most one heartbeat in flight. The helper uses adaptive scheduling; replies may take up to 12 seconds before the client ends the session, while the helper retains its 20-second lease. The helper restores the original value when that session ends or expires. Temporary display and user-activity assertions live in the app process.
 
 | Directory | Purpose |
 | --- | --- |

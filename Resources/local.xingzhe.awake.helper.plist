@@ -6,6 +6,6 @@
 <key>MachServices</key><dict><key>local.xingzhe.awake.helper</key><true/></dict>
 <key>RunAtLoad</key><true/>
 <key>KeepAlive</key><true/>
-<key>ProcessType</key><string>Background</string>
+<key>ProcessType</key><string>Adaptive</string>
 <key>ThrottleInterval</key><integer>5</integer>
 </dict></plist>

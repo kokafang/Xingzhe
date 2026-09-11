@@ -12,7 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var busy = false
     private var timer: Timer?
     private var waitingForApproval = false
-    private var lastReply = Date.distantPast
+    private var lastReply: TimeInterval = 0
+    private var heartbeatPending = false
     private var generation = 0
     private var lastDiagnostic = ""
 
@@ -25,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             self.generation += 1
             self.busy = false
+            self.heartbeatPending = false
             self.idle.stop()
             self.enabled = false
             self.render("连接已断开 · 后台将自动恢复原设置")
@@ -33,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             self.generation += 1
             self.busy = false
+            self.heartbeatPending = false
             self.client.disconnect()
             self.enabled = false
             self.render(message + " · 已结束保持清醒")
@@ -43,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 UserDefaults.standard.set(true, forKey: "loginSetupCompleted")
             } catch { render("登录自启动未启用：\(error.localizedDescription)") }
         }
-        timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in self?.tick() }
+        timer = Timer(timeInterval: ServiceTiming.heartbeatInterval, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(timer!, forMode: .common)
     }
 
@@ -72,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func render(_ message: String? = nil) {
         if let message, !message.isEmpty, message != lastDiagnostic {
-            NSLog("醒着状态：%@", message)
+            AwakeLog.app.notice("状态：\(message, privacy: .public)")
         }
         lastDiagnostic = message ?? ""
         toggle.state = enabled ? .on : .off
@@ -104,13 +107,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         generation += 1
         let current = generation
         busy = true
+        heartbeatPending = false
         render(desired ? "正在开启…" : "正在恢复原设置…")
         if desired {
             do { try idle.start() } catch { busy = false; render(error.localizedDescription); return }
         }
         client.request("set", enabled: desired) { [weak self] active, message in
             guard let self, self.generation == current else { return }
-            self.busy = false; self.enabled = active; self.lastReply = Date()
+            self.busy = false; self.enabled = active; self.lastReply = ProcessInfo.processInfo.systemUptime
             if !active { self.idle.stop() }
             self.render(message.isEmpty ? nil : message)
         }
@@ -122,15 +126,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             render("后台服务已就绪 · 可以打开开关")
         }
         guard enabled && !busy else { return }
-        if Date().timeIntervalSince(lastReply) > 18 {
+        if ProcessInfo.processInfo.systemUptime - lastReply > ServiceTiming.maximumSilence {
+            generation += 1; heartbeatPending = false
             idle.stop(); enabled = false; client.disconnect()
             render("连接超时 · 后台将自动恢复原设置")
             return
         }
+        guard !heartbeatPending else { return }
+        heartbeatPending = true
         let current = generation
         client.request("heartbeat") { [weak self] active, message in
             guard let self, self.generation == current else { return }
-            self.lastReply = Date(); self.enabled = active
+            self.heartbeatPending = false
+            self.lastReply = ProcessInfo.processInfo.systemUptime; self.enabled = active
             if !active { self.idle.stop() }
             self.render(message.isEmpty ? nil : message)
         }
@@ -144,7 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !enabled { client.disconnect(); return .terminateNow }
         client.request("set", enabled: false) { [weak self] _, message in
             self?.client.disconnect()
-            if !message.isEmpty { NSLog("退出恢复：%@", message) }
+            if !message.isEmpty { AwakeLog.app.error("退出恢复：\(message, privacy: .public)") }
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

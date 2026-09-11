@@ -32,10 +32,12 @@ final class RecoveryEngine {
                     throw AwakeError(text: "系统未恢复休眠设置，将自动重试。")
                 }
                 try backend.clearJournal()
+                AwakeLog.recovery.notice("Original SleepDisabled restored: \(original)")
             }
             lastError = ""
         } catch {
             lastError = error.localizedDescription
+            AwakeLog.recovery.error("恢复失败，将重试：\(error.localizedDescription, privacy: .public)")
             throw error
         }
     }
@@ -53,7 +55,7 @@ final class RecoveryEngine {
             try backend.writeDisabled(true)
             guard try backend.readDisabled() else { throw AwakeError(text: "系统未接受防休眠设置。") }
             owner = requestedOwner
-            expiresAt = now + 20
+            expiresAt = now + ServiceTiming.leaseDuration
             lastError = ""
         } catch {
             let failure = error
@@ -79,7 +81,7 @@ final class RecoveryEngine {
                 guard try backend.readDisabled() else {
                     throw AwakeError(text: "防休眠设置被其他程序更改，重新应用未成功。")
                 }
-                NSLog("检测到外部电源设置重置，已重新应用保持清醒。")
+                AwakeLog.recovery.notice("检测到外部电源设置重置，已重新应用保持清醒。")
             }
         } catch {
             let failure = error
@@ -88,7 +90,7 @@ final class RecoveryEngine {
             }
             throw failure
         }
-        expiresAt = now + 20
+        expiresAt = now + ServiceTiming.leaseDuration
     }
 
     func disable(owner requestedOwner: UUID) throws {
@@ -97,10 +99,16 @@ final class RecoveryEngine {
     }
 
     func disconnected(owner requestedOwner: UUID) {
-        if owner == requestedOwner { try? recover() }
+        if owner == requestedOwner {
+            AwakeLog.recovery.notice("Client disconnected; restoring original power settings")
+            try? recover()
+        }
     }
 
     func tick(now: TimeInterval) {
+        if owner != nil && now >= expiresAt {
+            AwakeLog.recovery.notice("Heartbeat lease expired; restoring original power settings")
+        }
         if owner == nil || now >= expiresAt { try? recover() }
     }
 }

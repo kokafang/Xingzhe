@@ -7,6 +7,13 @@ final class SystemPowerBackend: PowerBackend {
     private var journal: URL { directory.appendingPathComponent("recovery.json") }
 
     private func pmset(_ arguments: [String]) throws -> String {
+        let started = ProcessInfo.processInfo.systemUptime
+        defer {
+            let elapsed = ProcessInfo.processInfo.systemUptime - started
+            if elapsed > 2 {
+                AwakeLog.helper.notice("Slow pmset operation: arguments=\(arguments.joined(separator: " "), privacy: .public), seconds=\(elapsed)")
+            }
+        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
         process.arguments = arguments
@@ -17,11 +24,11 @@ final class SystemPowerBackend: PowerBackend {
         let watchdog = DispatchWorkItem { [weak process] in
             if let process, process.isRunning { process.terminate() }
         }
-        DispatchQueue.global().asyncAfter(deadline: .now() + 5, execute: watchdog)
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 5, execute: watchdog)
         let hardStop = DispatchWorkItem { [weak process] in
             if let process, process.isRunning { kill(process.processIdentifier, SIGKILL) }
         }
-        DispatchQueue.global().asyncAfter(deadline: .now() + 6, execute: hardStop)
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 6, execute: hardStop)
         defer { watchdog.cancel(); hardStop.cancel() }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
@@ -64,7 +71,7 @@ final class SystemPowerBackend: PowerBackend {
     func clearJournal() throws { try FileManager.default.removeItem(at: journal) }
 }
 
-let workQueue = DispatchQueue(label: "local.xingzhe.awake.power")
+let workQueue = DispatchQueue(label: "local.xingzhe.awake.power", qos: .userInitiated)
 let engine = RecoveryEngine(backend: SystemPowerBackend())
 
 final class Session: NSObject, AwakeService {
@@ -81,12 +88,16 @@ final class Session: NSObject, AwakeService {
     func setEnabled(_ enabled: Bool, reply: @escaping (Bool, String) -> Void) {
         workQueue.async {
             do {
+                AwakeLog.helper.notice("Set enabled=\(enabled)")
                 if enabled {
                     guard self.isConsoleUser() else { throw AwakeError(text: "仅当前登录用户可以开启。") }
                     try engine.enable(owner: self.id, now: ProcessInfo.processInfo.systemUptime)
                 } else { try engine.disable(owner: self.id) }
                 reply(engine.owner == self.id, "")
-            } catch { reply(engine.owner == self.id, error.localizedDescription) }
+            } catch {
+                AwakeLog.helper.error("Set failed: \(error.localizedDescription, privacy: .public)")
+                reply(engine.owner == self.id, error.localizedDescription)
+            }
         }
     }
     func heartbeat(reply: @escaping (Bool, String) -> Void) {
@@ -99,7 +110,7 @@ final class Session: NSObject, AwakeService {
                 try engine.renew(owner: self.id, now: ProcessInfo.processInfo.systemUptime)
                 reply(true, "")
             } catch {
-                NSLog("保持清醒心跳结束：%@", error.localizedDescription)
+                AwakeLog.helper.error("保持清醒心跳结束：\(error.localizedDescription, privacy: .public)")
                 reply(false, error.localizedDescription)
             }
         }
@@ -145,7 +156,7 @@ do {
     listener.setConnectionCodeSigningRequirement(try signingRequirement(for: containingAppURL()))
     listener.delegate = delegate
     listener.resume()
-} catch { NSLog("后台初始化失败：%@", error.localizedDescription) }
+} catch { AwakeLog.helper.error("后台初始化失败：\(error.localizedDescription, privacy: .public)") }
 // Remain alive to retry restoration, even if authentication cannot initialize.
 for sig in [SIGTERM, SIGINT] { signal(sig, SIG_IGN) }
 let shutdown = DispatchSource.makeSignalSource(signal: SIGTERM, queue: workQueue)

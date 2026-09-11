@@ -5,8 +5,10 @@ APP="$PWD/build/醒着.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/HelperTools" "$APP/Contents/Library/LaunchDaemons" build/cache
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 FLAGS=(-swift-version 5 -sdk "$SDK" -target arm64-apple-macos13.0 -module-cache-path "$PWD/build/cache")
-xcrun swiftc "${FLAGS[@]}" Sources/Shared/RecoveryEngine.swift Tests/main.swift -o build/RecoveryTests
+xcrun swiftc "${FLAGS[@]}" Sources/Shared/RecoveryEngine.swift Sources/Shared/Diagnostics.swift Sources/Shared/ServiceTiming.swift Tests/main.swift -o build/RecoveryTests
 build/RecoveryTests
+xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/App/ServiceClient.swift Tests/ServiceClient/main.swift -framework Security -o build/ServiceClientTests
+build/ServiceClientTests
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/Helper/main.swift -framework Foundation -framework Security -framework SystemConfiguration -o "$APP/Contents/Library/HelperTools/AwakeHelper"
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/App/*.swift -framework AppKit -framework ServiceManagement -framework Security -framework IOKit -o "$APP/Contents/MacOS/Awake"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
