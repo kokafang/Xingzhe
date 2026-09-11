@@ -4,27 +4,21 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>醒着</title>
         <item>
-            <title>1.1.0</title>
-            <pubDate>Fri, 11 Sep 2026 18:04:01 +0800</pubDate>
+            <title>1.1.1</title>
+            <pubDate>Fri, 11 Sep 2026 18:45:55 +0800</pubDate>
             <link>https://github.com/kokafang/Xingzhe</link>
             <sparkle:fullReleaseNotesLink>https://github.com/kokafang/Xingzhe/releases</sparkle:fullReleaseNotesLink>
-            <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>醒着 1.1.0</h2>
-<ul>
-<li>新增「检查更新…」，支持在应用内下载安装并重新启动。</li>
-<li>可选择每天自动检查新版，是否安装由你决定。</li>
-<li>更新前确认恢复原电源设置，更新后自动刷新后台服务。</li>
-<li>更新信息和安装包均经过签名验证。</li>
-</ul>
-<p>更新重启后，保持清醒默认关闭；需要时请重新打开太阳开关。</p>
+            <description><![CDATA[<h2>醒着 1.1.1</h2>
+<ul><li>使用 Apple Developer ID 正式签名，并通过 Apple 公证。</li><li>修复正式签名版本更新后后台服务的刷新判断。</li></ul>
 ]]></description>
-            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.1.0/Xingzhe-1.1.0-macOS-arm64.zip" length="2691496" type="application/octet-stream" sparkle:edSignature="dyHfaEZM8rvKbicAig+6nSrbSAYss8MexHP9MyD5grrvYIvz2d/HSdsbmi3+ILateqsqmh9Zt/rYuwaizRKDBg=="></enclosure>
+            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.1.1/Xingzhe-1.1.1-macOS-arm64.zip" length="2750450" type="application/octet-stream" sparkle:edSignature="l8S0lR+9apmuyFjvmu+sV++9x/1wcL1SfXx/kibnSAYB2qatlJ67SShxShnWzN/Hd/cg+s6vcBp6BLy7++9VDg=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: mmaQtMZgGFny0yk3LptAWWlKT9XOdq0KUkIl8puEceOFPa/URwAJ+1H4+79AayqGd3QNWvNGIoRffpSfotDSDg==
-length: 1788
+edSignature: 42Fue/SQauOrletosVUyWE3s5GftotCdKoXcE22oN0fKRRlDSntQz0sN+WDQsjz2KvSFIXNm45KsIIp3Z4FVDg==
+length: 1538
 -->
