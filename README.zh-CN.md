@@ -10,7 +10,7 @@
 
 - Apple 芯片 Mac（M 系列），macOS 13 或更高版本。
 - 首次使用需要批准后台服务。
-- 下载包使用本地 ad-hoc 签名，**尚未经过 Apple 公证**，用于试用；首次打开可能被系统拦截。此构建不支持 Intel Mac 和 Windows。
+- 从 1.1.1 起，正式发布流程要求 Developer ID 签名和 Apple 公证。本地开发构建默认仍使用 ad-hoc 签名。此构建不支持 Intel Mac 和 Windows。
 
 ## 安装与使用
 
@@ -19,7 +19,7 @@
 3. 点击屏幕顶部菜单栏的月亮图标，打开「保持清醒」。太阳图标表示开启。
 4. 如果系统请求批准，在「系统设置 → 通用 → 登录项与扩展」中允许「醒着」后台运行，再打开开关。部分 macOS 版本的页面名称是「登录项」。
 
-如果首次打开提示开发者无法验证，请在确认来源可信后按 [Apple 官方说明](https://support.apple.com/zh-cn/102445)处理，无需关闭整个系统的安全保护。
+如果使用早期未公证版本，请下载最新公证版本。macOS 仍可能显示从互联网下载应用后的正常首次打开确认。
 
 首次运行会申请登录自启动，但每次启动时「保持清醒」默认关闭。删除应用前，请先关闭开关并退出。
 
@@ -29,7 +29,7 @@
 
 发现新版后展示更新说明和下载进度。更新信息与安装包均经过签名验证。安装前确认恢复原电源设置，恢复失败会暂停退出；重启后保持清醒默认关闭，并自动刷新后台服务。系统仍可能要求批准后台服务。
 
-1.0.2 及更早版本需要先手动安装一次 1.1.0；之后可在应用内完成更新。
+1.0.2 及更早版本需要先手动安装一次最新版；之后可在应用内完成更新。
 
 ## 工作方式
 
@@ -59,10 +59,12 @@ python3 scripts/test-launch-path.py
 生成包含应用、说明和许可证的分享包：
 
 ```sh
+export CODE_SIGN_IDENTITY="Developer ID Application: YOUR NAME (TEAM_ID)"
+export NOTARY_PROFILE="YOUR_KEYCHAIN_PROFILE"
 bash scripts/package-release.sh
 ```
 
-产物是 `build/releases/1.1.0/Xingzhe-1.1.0-macOS-arm64.zip`，同目录下有 SHA-256 校验文件 `SHA256SUMS.txt` 和签名后的 `appcast.xml`。发布打包需要维护者本机钥匙串中的更新签名密钥。
+产物是 `build/releases/1.1.1/Xingzhe-1.1.1-macOS-arm64.zip`，同目录下有 SHA-256 校验文件 `SHA256SUMS.txt` 和签名后的 `appcast.xml`。发布需要带私钥的 Developer ID Application 证书、有效的 notarytool 钥匙串配置和 Sparkle 更新签名密钥。运行 `xcrun notarytool store-credentials YOUR_KEYCHAIN_PROFILE` 交互式保存公证凭据；不要将密码或私钥写入仓库。脚本先完成公证并附加票据，再生成最终 ZIP 和更新签名。
 
 ## 项目结构
 

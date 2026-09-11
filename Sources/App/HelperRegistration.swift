@@ -1,8 +1,8 @@
 import Foundation
 import ServiceManagement
 
-// An ad-hoc build has a new code identity after each update. The daemon caches
-// the client's signature at launch, so refresh it once for each app identity.
+// Refresh the running daemon for every build, including Developer ID builds
+// whose designated signing requirement stays stable across app updates.
 final class HelperRegistration {
     private let service = SMAppService.daemon(plistName: daemonPlist)
     private let probe = ServiceClient()
@@ -11,8 +11,14 @@ final class HelperRegistration {
     private(set) var isRepairing = false
     var wasRegistered: Bool { defaults.string(forKey: signatureKey) != nil }
 
+    private func registrationIdentity() throws -> String {
+        let requirement = try signingRequirement(for: Bundle.main.bundleURL)
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        return requirement + "|build=" + build
+    }
+
     func markCurrent() {
-        if let signature = try? signingRequirement(for: Bundle.main.bundleURL) {
+        if let signature = try? registrationIdentity() {
             defaults.set(signature, forKey: signatureKey)
         }
     }
@@ -23,7 +29,7 @@ final class HelperRegistration {
             return
         }
         do {
-            let signature = try signingRequirement(for: Bundle.main.bundleURL)
+            let signature = try registrationIdentity()
             guard defaults.string(forKey: signatureKey) != signature else { completion(nil); return }
             isRepairing = true
             AwakeLog.app.notice("Refreshing helper after app update")

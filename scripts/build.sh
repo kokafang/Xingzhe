@@ -22,8 +22,12 @@ cp README.md README.zh-CN.md LICENSE NOTICE CHANGELOG.md THIRD_PARTY_NOTICES.md 
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/local.xingzhe.awake.helper.plist "$APP/Contents/Library/LaunchDaemons/"
-codesign --force --sign - --identifier local.xingzhe.awake.helper "$APP/Contents/Library/HelperTools/AwakeHelper"
-codesign --force --sign - "$APP"
+if [[ -n "${CODE_SIGN_IDENTITY:-}" ]]; then
+    bash scripts/sign-app.sh "$APP"
+else
+    codesign --force --sign - --identifier local.xingzhe.awake.helper "$APP/Contents/Library/HelperTools/AwakeHelper"
+    codesign --force --sign - "$APP"
+fi
 codesign --verify --deep --strict "$APP"
 plutil -lint "$APP/Contents/Info.plist" "$APP/Contents/Library/LaunchDaemons/local.xingzhe.awake.helper.plist"
 printf 'Built: %s\n' "$APP"

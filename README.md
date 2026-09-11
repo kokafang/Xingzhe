@@ -12,7 +12,7 @@ Xingzhe is a small native macOS utility built with Swift and AppKit. It lives in
 
 - Apple silicon Mac (M series), macOS 13 or later.
 - Approval for the bundled background service on first use.
-- The downloadable build is locally signed with an ad-hoc signature and **is not Apple-notarized**. It is a testing build; macOS may block the first launch. Intel Macs and Windows are not supported by this build.
+- Starting with 1.1.1, release packaging requires Developer ID signing and Apple notarization. Local development builds remain ad-hoc signed by default. Intel Macs and Windows are not supported by this build.
 
 ## Install
 
@@ -21,7 +21,7 @@ Xingzhe is a small native macOS utility built with Swift and AppKit. It lives in
 3. Click the moon icon in the menu bar and turn on **保持清醒** (Keep Awake).
 4. If macOS requests approval, allow Xingzhe / 醒着 under **System Settings → General → Login Items & Extensions**, then turn on the switch again. On some macOS versions, the page is called **Login Items**.
 
-If the first launch is blocked because the developer cannot be verified, follow [Apple’s instructions for opening an app you trust](https://support.apple.com/en-us/102445). No system-wide security changes are required.
+For an older unsigned release, download the latest notarized version. macOS may still show its normal first-open confirmation for an app downloaded from the internet.
 
 The sun icon means Keep Awake is enabled; the moon means it is disabled. The app requests login startup on its first launch, but **Keep Awake starts off each time the app launches**. Turn it off and quit the app before removing it.
 
@@ -29,9 +29,9 @@ The sun icon means Keep Awake is enabled; the moon means it is disabled. The app
 
 Click **检查更新…** (Check for Updates) in the menu bar menu. You can also enable **自动检查更新** for daily checks. Xingzhe asks before enabling automatic checks and before installing; automatic downloads and silent installation are disabled.
 
-The updater shows release notes and progress, verifies the signed feed and archive, then installs and restarts. Before quitting, Xingzhe confirms that the helper restored the original power setting. Failed restoration pauses installation. After restart, Keep Awake is off and the helper is refreshed automatically if the app signature changed. macOS may still request background-service approval.
+The updater shows release notes and progress, verifies the signed feed and archive, then installs and restarts. Before quitting, Xingzhe confirms that the helper restored the original power setting. Failed restoration pauses installation. After restart, Keep Awake is off and the helper is refreshed automatically if the app build or signature changed. macOS may still request background-service approval.
 
-Versions 1.0.2 and older need one manual upgrade to 1.1.0. Later upgrades can be installed from within the app.
+Versions 1.0.2 and older need one manual upgrade to the latest version. Later upgrades can be installed from within the app.
 
 ## What it does
 
@@ -59,10 +59,12 @@ The app is generated at `build/醒着.app`. The build runs recovery and local-XP
 Create a shareable ZIP with the app, documentation, license notices, and a SHA-256 checksum:
 
 ```sh
+export CODE_SIGN_IDENTITY="Developer ID Application: YOUR NAME (TEAM_ID)"
+export NOTARY_PROFILE="YOUR_KEYCHAIN_PROFILE"
 bash scripts/package-release.sh
 ```
 
-Output: `build/releases/1.1.0/Xingzhe-1.1.0-macOS-arm64.zip` and `build/releases/1.1.0/SHA256SUMS.txt`. Release signing requires the maintainer’s Sparkle signing key in the login Keychain.
+Output: `build/releases/1.1.1/Xingzhe-1.1.1-macOS-arm64.zip` and `build/releases/1.1.1/SHA256SUMS.txt`. Release signing requires a Developer ID Application certificate with its private key, a validated notarytool Keychain profile, and the maintainer’s Sparkle signing key. Register notarization credentials interactively with `xcrun notarytool store-credentials YOUR_KEYCHAIN_PROFILE`; never put passwords or private keys in the repository. Packaging notarizes and staples the app before generating the final ZIP and Sparkle signatures.
 
 ## How it works
 

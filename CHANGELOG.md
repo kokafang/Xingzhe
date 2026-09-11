@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Sign distribution builds with Developer ID, hardened runtime, and secure timestamps.
+- Require Apple notarization and a stapled ticket before packaging releases.
+- Refresh the privileged helper on build changes even when the signing identity is unchanged.
+
 ## 1.1.0
 
 - Add in-app update checks, version display, and an optional daily automatic-check setting using Sparkle 2.9.6.

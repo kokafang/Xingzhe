@@ -1,9 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+: "${CODE_SIGN_IDENTITY:?Release requires a Developer ID Application identity}"
+: "${NOTARY_PROFILE:?Release requires a notarytool keychain profile}"
 bash scripts/build.sh
 APP="$PWD/build/醒着.app"
 SPARKLE="$PWD/build/dependencies/Sparkle-2.9.6"
+bash scripts/notarize-app.sh "$APP"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 RELEASE_DIR="$PWD/build/releases/$VERSION"
 mkdir -p "$RELEASE_DIR"
