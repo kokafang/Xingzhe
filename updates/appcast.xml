@@ -4,21 +4,20 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>醒着</title>
         <item>
-            <title>1.1.1</title>
-            <pubDate>Fri, 11 Sep 2026 18:45:55 +0800</pubDate>
+            <title>1.1.2</title>
+            <pubDate>Tue, 15 Sep 2026 14:16:07 +0800</pubDate>
             <link>https://github.com/kokafang/Xingzhe</link>
             <sparkle:fullReleaseNotesLink>https://github.com/kokafang/Xingzhe/releases</sparkle:fullReleaseNotesLink>
-            <sparkle:version>6</sparkle:version>
-            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>醒着 1.1.1</h2>
-<ul><li>使用 Apple Developer ID 正式签名，并通过 Apple 公证。</li><li>修复正式签名版本更新后后台服务的刷新判断。</li></ul>
+            <description><![CDATA[<h2>醒着 1.1.2</h2><ul><li>改善部分电脑提示“无法确认系统休眠状态”的兼容性：增加内核状态备用读取。</li><li>两种读取均失败时仍保留保护，不擅自修改电源设置。</li></ul>
 ]]></description>
-            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.1.1/Xingzhe-1.1.1-macOS-arm64.zip" length="2750450" type="application/octet-stream" sparkle:edSignature="l8S0lR+9apmuyFjvmu+sV++9x/1wcL1SfXx/kibnSAYB2qatlJ67SShxShnWzN/Hd/cg+s6vcBp6BLy7++9VDg=="></enclosure>
+            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.1.2/Xingzhe-1.1.2-macOS-arm64.zip" length="2759432" type="application/octet-stream" sparkle:edSignature="Zd010EycYV2jht1CiHqxXt3aF4JPv7Z4V0HErCRsp8tCQrORucDxKeE1CYG0mn7Xr2OhW7O6h3U2xO6DiL9IDA=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 42Fue/SQauOrletosVUyWE3s5GftotCdKoXcE22oN0fKRRlDSntQz0sN+WDQsjz2KvSFIXNm45KsIIp3Z4FVDg==
-length: 1538
+edSignature: dNdPNLNDotNBAkxpcTFKkc5i/YogHrsxP8EGCLCwxwlHZYbM1C+/duoeO39DdmaUvGYWOMpbDlmyiPMel8tYCg==
+length: 1588
 -->
