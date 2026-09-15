@@ -9,6 +9,8 @@ SDK="$(xcrun --sdk macosx --show-sdk-path)"
 FLAGS=(-swift-version 5 -sdk "$SDK" -target arm64-apple-macos13.0 -module-cache-path "$PWD/build/cache")
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/RecoveryEngine.swift Sources/Shared/Diagnostics.swift Sources/Shared/ServiceTiming.swift Tests/main.swift -o build/RecoveryTests
 build/RecoveryTests
+xcrun swiftc "${FLAGS[@]}" Sources/Shared/RecoveryEngine.swift Sources/Shared/Diagnostics.swift Sources/Shared/ServiceTiming.swift Sources/Shared/SleepStateReader.swift Tests/PowerState/main.swift -o build/PowerStateTests
+build/PowerStateTests
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/App/ServiceClient.swift Tests/ServiceClient/main.swift -framework Security -o build/ServiceClientTests
 build/ServiceClientTests
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/UpdatePreparation.swift Tests/Updates/main.swift -o build/UpdateTests

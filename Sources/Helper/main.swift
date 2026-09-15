@@ -1,6 +1,7 @@
 import Foundation
 import SystemConfiguration
 import Darwin
+import IOKit
 
 final class SystemPowerBackend: PowerBackend {
     private let directory = URL(fileURLWithPath: "/var/db/local.xingzhe.awake", isDirectory: true)
@@ -40,16 +41,12 @@ final class SystemPowerBackend: PowerBackend {
     }
 
     func readDisabled() throws -> Bool {
-        let output = try pmset(["-g"])
-        for line in output.split(separator: "\n") {
-            let fields = line.split(whereSeparator: { $0.isWhitespace })
-            if fields.first == "SleepDisabled", fields.count == 2 {
-                if fields[1] == "0" { return false }
-                if fields[1] == "1" { return true }
-            }
-        }
-        // Some versions omit the default false key; do not silently assume it.
-        throw AwakeError(text: "无法确认系统休眠状态。")
+        try SleepStateReader.read(pmsetOutput: { try self.pmset(["-g"]) }, kernelValue: {
+            let root = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+            guard root != IO_OBJECT_NULL else { return nil }
+            defer { IOObjectRelease(root) }
+            return IORegistryEntryCreateCFProperty(root, "SleepDisabled" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue()
+        })
     }
 
     func writeDisabled(_ value: Bool) throws { _ = try pmset(["-a", "disablesleep", value ? "1" : "0"]) }

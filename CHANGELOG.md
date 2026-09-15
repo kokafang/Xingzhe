@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+- Fall back to an explicit IOPMrootDomain SleepDisabled Boolean when pmset omits or cannot return the preference.
+- Keep unknown state as an error; never assume missing values mean sleep is enabled.
+- Add regression coverage for missing preferences, malformed output and fallback failures.
+
 ## 1.1.1
 
 - Sign distribution builds with Developer ID, hardened runtime, and secure timestamps.
