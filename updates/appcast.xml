@@ -4,20 +4,20 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>醒着</title>
         <item>
-            <title>1.1.2</title>
-            <pubDate>Tue, 15 Sep 2026 14:16:07 +0800</pubDate>
+            <title>1.2.0</title>
+            <pubDate>Thu, 29 Oct 2026 15:32:26 +0800</pubDate>
             <link>https://github.com/kokafang/Xingzhe</link>
             <sparkle:fullReleaseNotesLink>https://github.com/kokafang/Xingzhe/releases</sparkle:fullReleaseNotesLink>
-            <sparkle:version>7</sparkle:version>
-            <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>醒着 1.1.2</h2><ul><li>改善部分电脑提示“无法确认系统休眠状态”的兼容性：增加内核状态备用读取。</li><li>两种读取均失败时仍保留保护，不擅自修改电源设置。</li></ul>
+            <description><![CDATA[<h2>醒着 1.2.0</h2><ul><li>新增「只醒一次」开关：手动开启醒着，合盖运行，再次开盖自动关闭醒着。</li><li>下次合盖前需重新手动开启；「只醒一次」的选择会保留。</li><li>支持开启过程中的合盖/开盖变化；检测失败时结束本次醒着。</li></ul>
 ]]></description>
-            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.1.2/Xingzhe-1.1.2-macOS-arm64.zip" length="2759432" type="application/octet-stream" sparkle:edSignature="Zd010EycYV2jht1CiHqxXt3aF4JPv7Z4V0HErCRsp8tCQrORucDxKeE1CYG0mn7Xr2OhW7O6h3U2xO6DiL9IDA=="></enclosure>
+            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.2.0/Xingzhe-1.2.0-macOS-arm64.zip" length="2777678" type="application/octet-stream" sparkle:edSignature="LZrgNFkb2+8N7B33gMEXM5WD2QE2QpFBjifBXTKWViCvlmBfpK1G0MLhxoUWYiDX5Sd6+AA5gMrutxz59hLeAQ=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: dNdPNLNDotNBAkxpcTFKkc5i/YogHrsxP8EGCLCwxwlHZYbM1C+/duoeO39DdmaUvGYWOMpbDlmyiPMel8tYCg==
-length: 1588
+edSignature: tFd1XG7MoxqfiieKTKSYZBdIOeIw7hebSpieAt4p1+JaWe6FKcnHATG606s0QvXWFbZwnn9GZP5GrkZrBECjDA==
+length: 1679
 -->
