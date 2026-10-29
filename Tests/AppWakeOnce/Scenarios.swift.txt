@@ -1,0 +1,100 @@
+extension AppDelegate {
+    static func testApp(once: Bool = true) -> AppDelegate {
+        TestDefaults.standard.values = ["wakeOnceEnabled": once]
+        let app = AppDelegate()
+        app.installTestCallbacks()
+        return app
+    }
+    func testStart() { toggleChanged() }
+    func testMode(_ once: Bool) { onceToggle.state = once ? .on : .off; onceChanged() }
+    func testRegister(_ error: String? = nil) { registration.completions.removeFirst()(error) }
+    func testLid(_ closed: Bool) { lidMonitor.emit(closed) }
+    func testLidFailure() { lidMonitor.fail() }
+    func testReply(_ index: Int, _ active: Bool, _ error: String = "") { client.requests[index].reply(active, error) }
+    func testHeartbeat() { tick() }
+    var testRequests: [String] { client.requests.map { $0.action == "set" ? "set:\($0.enabled)" : $0.action } }
+    var testEnabled: Bool { enabled }
+    var testBusy: Bool { busy }
+    var testIdle: Bool { idle.active }
+    var testTracking: Bool { lidMonitor.monitoring }
+    var testNote: String { testMessage }
+    var testModeEnabled: Bool { onlyOnce }
+}
+var checks = 0
+func check(_ condition: @autoclosure () -> Bool, _ label: String) {
+    guard condition() else { fatalError(label) }
+    checks += 1
+    print("PASS: \(label)")
+}
+func running() -> AppDelegate {
+    let app = AppDelegate.testApp()
+    app.testStart(); app.testRegister(); app.testReply(0, true)
+    return app
+}
+
+do {
+    let app = AppDelegate.testApp()
+    app.testStart()
+    app.testLid(true); app.testLid(false)
+    check(app.testBusy && app.testRequests.isEmpty, "registration retains close/open without sending an enable")
+    app.testRegister()
+    check(!app.testEnabled && !app.testBusy && app.testRequests.isEmpty, "registration completion honors pending stop")
+    app.testLid(true)
+    check(app.testRequests.isEmpty, "later lid close never enables automatically")
+}
+do {
+    let app = AppDelegate.testApp()
+    app.testStart(); app.testRegister()
+    app.testLid(true); app.testLid(false)
+    check(app.testRequests == ["set:true"] && !app.testIdle, "opening during enable waits and releases idle assertions")
+    app.testReply(0, true)
+    check(app.testRequests == ["set:true", "set:false"], "enable reply is followed by exactly one disable")
+    app.testReply(1, false)
+    check(!app.testEnabled && !app.testBusy && app.testNote.contains("已自动关闭"), "confirmed restoration reports automatic shutdown")
+    app.testReply(0, true)
+    check(!app.testEnabled && app.testRequests.count == 2, "stale enable reply cannot revive a finished cycle")
+    app.testLid(true); app.testLid(false)
+    check(app.testRequests.count == 2 && !app.testTracking, "finished cycle ignores later lid changes")
+    app.testStart(); app.testRegister(); app.testReply(2, true)
+    check(app.testEnabled && app.testTracking, "new manual enable starts a fresh one-shot cycle")
+}
+do {
+    let app = running()
+    app.testHeartbeat()
+    check(app.testRequests == ["set:true", "heartbeat"], "heartbeat is outstanding before opening")
+    app.testLid(true); app.testLid(false)
+    app.testReply(2, false)
+    app.testReply(1, true)
+    check(!app.testEnabled && !app.testBusy, "stale heartbeat after stop cannot re-enable")
+}
+do {
+    let app = running()
+    app.testMode(false)
+    app.testLid(true); app.testLid(false)
+    check(app.testEnabled && app.testIdle && app.testRequests == ["set:true"], "turning mode off preserves current awake session")
+    check(!app.testModeEnabled && !app.testTracking, "mode-off preference and monitoring agree")
+    app.testMode(true)
+    app.testLid(true); app.testLid(false)
+    check(app.testRequests == ["set:true", "set:false"], "enabling mode on an active session arms its next cycle")
+}
+do {
+    let app = running()
+    app.testLidFailure()
+    check(app.testRequests == ["set:true", "set:false"] && !app.testIdle, "monitor failure requests restoration")
+    app.testReply(1, false, "TEST: recovery failed")
+    check(!app.testEnabled && app.testNote == "TEST: recovery failed", "restoration error does not report success")
+}
+do {
+    let app = running()
+    app.testLid(true); app.testLid(false)
+    app.testReply(1, true, "TEST: still active")
+    check(!app.testEnabled && app.testNote.contains("尚未确认"), "unexpected active stop reply is shown as unconfirmed")
+    app.testHeartbeat()
+    check(app.testRequests.count == 2, "unconfirmed stop does not keep the session alive with heartbeats")
+}
+do {
+    let app = AppDelegate.testApp()
+    app.testStart(); app.testLidFailure(); app.testRegister()
+    check(app.testRequests.isEmpty && !app.testEnabled, "monitor failure during registration prevents enable")
+}
+print("\(checks) AppDelegate wake-once integration checks passed; no system power changes")

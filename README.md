@@ -25,6 +25,14 @@ For an older unsigned release, download the latest notarized version. macOS may 
 
 The sun icon means Keep Awake is enabled; the moon means it is disabled. The app requests login startup on its first launch, but **Keep Awake starts off each time the app launches**. Turn it off and quit the app before removing it.
 
+## Wake Once
+
+Enable **只醒一次** (Wake Once), then manually enable Keep Awake. Closing the lid keeps the session running; the following lid opening turns Keep Awake off and restores the original power setting. The next session requires another manual activation.
+
+The preference persists and defaults to off; it never enables Keep Awake by itself. Enabling the preference during an active session begins tracking from the current lid state. Disabling it only cancels automatic stopping. An unreadable lid sensor blocks one-shot activation; monitoring failure ends an active one-shot session. This mode requires a MacBook with a readable lid sensor.
+
+Restoration preserves the original settings: another app may still prevent sleep. Physical lid behavior needs verification on the target Mac.
+
 ## Updates
 
 Click **检查更新…** (Check for Updates) in the menu bar menu. You can also enable **自动检查更新** for daily checks. Xingzhe asks before enabling automatic checks and before installing; automatic downloads and silent installation are disabled.

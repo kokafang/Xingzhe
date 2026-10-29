@@ -4,6 +4,11 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let toggle = NSSwitch()
+    private let onceToggle = NSSwitch()
+    private let lidMonitor = LidMonitor()
+    private var onceSession = WakeOnceSession()
+    private var automaticStopMessage: String?
+    private var onlyOnce = UserDefaults.standard.bool(forKey: "wakeOnceEnabled")
     private let detail = NSTextField(wrappingLabelWithString: "已关闭 · 使用原有系统设置")
     private let client = ServiceClient()
     private let idle = IdleGuard()
@@ -34,12 +39,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier!)
         if others.count > 1 { NSApp.terminate(nil); return }
         buildMenu()
+        lidMonitor.onChange = { [weak self] closed in
+            guard let self else { return }
+            if self.onceSession.observe(lidClosed: closed) {
+                self.requestAutomaticStop("已开盖 · 醒着已自动关闭")
+            }
+        }
+        lidMonitor.onFailure = { [weak self] message in
+            guard let self, self.onceSession.requestStop() else { return }
+            self.requestAutomaticStop(message + " · 已结束本次醒着")
+        }
         client.onDisconnect = { [weak self] in
             guard let self else { return }
             self.generation += 1
             self.busy = false
             self.heartbeatPending = false
             self.idle.stop()
+            self.cancelOnceTracking()
             self.enabled = false
             self.render("连接已断开 · 后台将自动恢复原设置")
         }
@@ -49,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.busy = false
             self.heartbeatPending = false
             self.client.disconnect()
+            self.cancelOnceTracking()
             self.enabled = false
             self.render(message + " · 已结束保持清醒")
         }
@@ -75,13 +92,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func buildMenu() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let menu = NSMenu()
-        let root = NSView(frame: NSRect(x: 0, y: 0, width: 290, height: 90))
+        let root = NSView(frame: NSRect(x: 0, y: 0, width: 290, height: 132))
         let label = NSTextField(labelWithString: "保持清醒")
         label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.frame = NSRect(x: 18, y: 54, width: 180, height: 23)
-        toggle.frame = NSRect(x: 230, y: 51, width: 44, height: 28)
+        label.frame = NSRect(x: 18, y: 96, width: 180, height: 23)
+        toggle.frame = NSRect(x: 230, y: 93, width: 44, height: 28)
         toggle.target = self; toggle.action = #selector(toggleChanged)
         toggle.setAccessibilityLabel("保持清醒")
+        let onceLabel = NSTextField(labelWithString: "只醒一次")
+        onceLabel.font = .systemFont(ofSize: 13)
+        onceLabel.frame = NSRect(x: 18, y: 58, width: 180, height: 23)
+        onceToggle.frame = NSRect(x: 230, y: 55, width: 44, height: 28)
+        onceToggle.target = self; onceToggle.action = #selector(onceChanged)
+        onceToggle.setAccessibilityLabel("只醒一次，合盖后再次开盖自动关闭醒着")
+        onceToggle.toolTip = "手动开启醒着后，合盖运行；再次开盖自动关闭醒着。"
+        root.addSubview(onceLabel); root.addSubview(onceToggle)
         detail.font = .systemFont(ofSize: 11)
         detail.textColor = .secondaryLabelColor
         detail.frame = NSRect(x: 18, y: 9, width: 254, height: 36)
@@ -103,11 +128,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lastDiagnostic = message ?? ""
         toggle.state = enabled ? .on : .off
         toggle.isEnabled = !busy
+        onceToggle.state = onlyOnce ? .on : .off
+        onceToggle.isEnabled = !busy
         statusItem.button?.image = NSImage(systemSymbolName: enabled ? "sun.max.fill" : "moon.zzz",
                                           accessibilityDescription: enabled ? "醒着：已开启" : "醒着：已关闭")
         statusItem.button?.image?.isTemplate = true
         statusItem.button?.toolTip = enabled ? "醒着 · 保持清醒已开启" : "醒着 · 已关闭"
-        detail.stringValue = message ?? (enabled ? "已开启 · 保持运行，抑制自动锁屏" : "已关闭 · 使用原有系统设置")
+        let standard = enabled ? "已开启 · 保持运行，抑制自动锁屏" : "已关闭 · 使用原有系统设置"
+        let onceHint = enabled ? "本次已开启 · 合盖后开盖自动关闭" : "只醒一次 · 请手动开启醒着"
+        detail.stringValue = message ?? (onlyOnce ? onceHint : standard)
+    }
+
+    @objc private func onceChanged() {
+        guard !busy else { return }
+        let desired = onceToggle.state == .on
+        if desired && enabled {
+            do { try beginOnceTracking() }
+            catch { render(error.localizedDescription); return }
+        } else { cancelOnceTracking() }
+        onlyOnce = desired
+        UserDefaults.standard.set(desired, forKey: "wakeOnceEnabled")
+        render()
+    }
+
+    private func beginOnceTracking() throws {
+        cancelOnceTracking()
+        onceSession.begin(lidClosed: try lidMonitor.start())
+    }
+
+    private func cancelOnceTracking() {
+        lidMonitor.stop()
+        onceSession.cancel()
+        automaticStopMessage = nil
+    }
+
+    private func requestAutomaticStop(_ confirmation: String) {
+        automaticStopMessage = confirmation
+        lidMonitor.stop()
+        idle.stop()
+        // Registration and enable requests must finish before set(false), so a
+        // delayed enable cannot turn the session on again after lid opening.
+        if busy { render("本次醒着已结束 · 等待后台确认关闭…") }
+        else if enabled { change(false, confirmation: confirmation) }
     }
 
     @objc private func toggleChanged() {
@@ -122,34 +184,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             guard daemon.status == .enabled else { throw AwakeError(text: "后台服务未启用，请在系统设置中批准。") }
+            if onlyOnce { try beginOnceTracking() }
             busy = true
             render("正在检查后台服务…")
             registration.ensureCurrent { [weak self] error in
                 guard let self else { return }
                 self.busy = false
                 if let error {
+                    self.cancelOnceTracking()
                     self.waitingForApproval = self.daemon.status == .requiresApproval
                     self.render(error)
+                } else if self.onceSession.needsStop {
+                    let message = self.automaticStopMessage
+                    self.cancelOnceTracking()
+                    self.render(message)
                 } else { self.change(true) }
             }
-        } catch { render(error.localizedDescription) }
+        } catch { cancelOnceTracking(); render(error.localizedDescription) }
     }
 
-    private func change(_ desired: Bool) {
+    private func change(_ desired: Bool, confirmation: String? = nil) {
+        if !desired { cancelOnceTracking(); idle.stop() }
         generation += 1
         let current = generation
         busy = true
         heartbeatPending = false
         render(desired ? "正在开启…" : "正在恢复原设置…")
         if desired {
-            do { try idle.start() } catch { busy = false; render(error.localizedDescription); return }
+            do { try idle.start() } catch { busy = false; cancelOnceTracking(); render(error.localizedDescription); return }
         }
         client.request("set", enabled: desired) { [weak self] active, message in
             guard let self, self.generation == current else { return }
             self.busy = false; self.enabled = active; self.lastReply = ProcessInfo.processInfo.systemUptime
-            if !active { self.idle.stop() }
+            if desired && self.onceSession.needsStop {
+                let reason = self.automaticStopMessage
+                if active { self.change(false, confirmation: reason) }
+                else {
+                    self.idle.stop(); self.cancelOnceTracking()
+                    self.render(message.isEmpty ? reason : message)
+                }
+                return
+            }
+            if !active { self.idle.stop(); self.cancelOnceTracking() }
+            if !desired && active {
+                self.enabled = false
+                self.client.disconnect()
+                self.render("关闭尚未确认 · 后台将按超时恢复原设置")
+                return
+            }
             if active && message.isEmpty { self.registration.markCurrent() }
-            self.render(message.isEmpty ? nil : message)
+            self.render(message.isEmpty ? confirmation : message)
         }
     }
 
@@ -161,7 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard enabled && !busy else { return }
         if ProcessInfo.processInfo.systemUptime - lastReply > ServiceTiming.maximumSilence {
             generation += 1; heartbeatPending = false
-            idle.stop(); enabled = false; client.disconnect()
+            idle.stop(); cancelOnceTracking(); enabled = false; client.disconnect()
             render("连接超时 · 后台将自动恢复原设置")
             return
         }
@@ -172,7 +256,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, self.generation == current else { return }
             self.heartbeatPending = false
             self.lastReply = ProcessInfo.processInfo.systemUptime; self.enabled = active
-            if !active { self.idle.stop() }
+            if !active { self.idle.stop(); self.cancelOnceTracking() }
             self.render(message.isEmpty ? nil : message)
         }
     }
@@ -181,6 +265,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard statusItem != nil else { return .terminateNow }
         guard !registration.isRepairing else { return .terminateCancel }
+        cancelOnceTracking()
         if updates.installingUpdate || daemon.status == .enabled {
             generation += 1
             busy = true; heartbeatPending = false

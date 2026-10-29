@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Add a persistent opt-in “只醒一次” (Wake Once) switch. Each manual Keep Awake activation covers one lid close/open cycle; opening the lid restores the original power setting and turns Keep Awake off.
+- Observe physical lid events independently of sleep, including transitions during helper startup; never enable automatically on subsequent lid closes.
+- Stop a one-shot session safely if lid monitoring fails, and reject one-shot activation on machines without a readable lid sensor.
+- Add close/open, cancellation, and delayed-enable regression coverage.
+
 ## 1.1.2
 
 - Fall back to an explicit IOPMrootDomain SleepDisabled Boolean when pmset omits or cannot return the preference.

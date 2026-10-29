@@ -1,0 +1,72 @@
+import Foundation
+
+struct AwakeError: LocalizedError {
+    let text: String
+    var errorDescription: String? { text }
+}
+let daemonPlist = "test-only.daemon"
+final class FakeStatusItem {}
+final class FakeSwitch {
+    enum State { case on, off }
+    var state: State = .off
+}
+final class FakeTextField {
+    init(wrappingLabelWithString: String) {}
+}
+final class TestDefaults {
+    static let standard = TestDefaults()
+    var values: [String: Bool] = [:]
+    func bool(forKey key: String) -> Bool { values[key] ?? false }
+    func set(_ value: Bool, forKey key: String) { values[key] = value }
+}
+final class FakeServiceClient {
+    struct Request {
+        let action: String
+        let enabled: Bool
+        let reply: (Bool, String) -> Void
+    }
+    var onDisconnect: (() -> Void)?
+    var requests: [Request] = []
+    var disconnects = 0
+    func request(_ action: String, enabled: Bool = false, completion: @escaping (Bool, String) -> Void) {
+        requests.append(Request(action: action, enabled: enabled, reply: completion))
+    }
+    func disconnect() { disconnects += 1 }
+}
+final class FakeIdleGuard {
+    var onFailure: ((String) -> Void)?
+    var active = false
+    func start() throws { active = true }
+    func stop() { active = false }
+}
+final class FakeLidMonitor {
+    var onChange: ((Bool) -> Void)?
+    var onFailure: ((String) -> Void)?
+    var closed = false
+    var monitoring = false
+    func start() throws -> Bool { monitoring = true; return closed }
+    func stop() { monitoring = false }
+    func emit(_ closed: Bool) {
+        self.closed = closed
+        if monitoring { onChange?(closed) }
+    }
+    func fail() {
+        guard monitoring else { return }
+        monitoring = false
+        onFailure?("TEST: lid unavailable")
+    }
+}
+final class FakeHelperRegistration {
+    var wasRegistered = true
+    var completions: [(String?) -> Void] = []
+    func ensureCurrent(completion: @escaping (String?) -> Void) { completions.append(completion) }
+    func markCurrent() {}
+}
+final class FakeUpdateController {}
+final class FakeSMAppService {
+    enum Status { case enabled, notRegistered, notFound, requiresApproval }
+    var status: Status = .enabled
+    static func daemon(plistName: String) -> FakeSMAppService { FakeSMAppService() }
+    func register() throws { status = .enabled }
+    static func openSystemSettingsLoginItems() { fatalError("unexpected system-settings request") }
+}

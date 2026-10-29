@@ -15,6 +15,9 @@ xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/App/ServiceClient.swif
 build/ServiceClientTests
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/UpdatePreparation.swift Tests/Updates/main.swift -o build/UpdateTests
 build/UpdateTests
+xcrun swiftc "${FLAGS[@]}" Sources/Shared/WakeOnceSession.swift Tests/WakeOnce/main.swift -o build/WakeOnceTests
+build/WakeOnceTests
+python3 scripts/test-wake-once-integration.py
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/Helper/main.swift -framework Foundation -framework Security -framework SystemConfiguration -o "$APP/Contents/Library/HelperTools/AwakeHelper"
 xcrun swiftc "${FLAGS[@]}" Sources/Shared/*.swift Sources/App/*.swift -framework AppKit -framework ServiceManagement -framework Security -framework IOKit -F "$SPARKLE" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks -o "$APP/Contents/MacOS/Awake"
 mkdir -p "$APP/Contents/Frameworks"

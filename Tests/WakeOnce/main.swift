@@ -1,0 +1,36 @@
+import Foundation
+
+var checks = 0
+func check(_ condition: @autoclosure () -> Bool, _ label: String) {
+    precondition(condition(), label)
+    checks += 1
+    print("PASS: \(label)")
+}
+var session = WakeOnceSession()
+check(!session.observe(lidClosed: true) && !session.observe(lidClosed: false), "off never starts a session")
+session.begin(lidClosed: false)
+check(!session.observe(lidClosed: false), "initial open does not end manual activation")
+check(!session.observe(lidClosed: true), "closing preserves awake session")
+check(session.phase == .waitingForOpen, "closed session awaits opening")
+check(!session.observe(lidClosed: true), "duplicate closed notifications do not stop")
+check(session.observe(lidClosed: false), "opening requests automatic restoration")
+check(session.needsStop, "stop intent survives an asynchronous enable reply")
+check(!session.observe(lidClosed: false), "duplicate open cannot request another stop")
+check(!session.observe(lidClosed: true) && session.needsStop, "closing again never cancels stop or re-enables")
+session.cancel()
+check(!session.needsStop && !session.isTracking, "manual off/failure/quit clears old cycle")
+session.begin(lidClosed: false)
+check(!session.observe(lidClosed: false), "new manual session gets a fresh cycle")
+session.observe(lidClosed: true)
+check(session.observe(lidClosed: false), "quick close/open is retained while helper is busy")
+session.cancel()
+session.begin(lidClosed: true)
+check(session.observe(lidClosed: false), "enabled while already closed stops at next opening")
+session.begin(lidClosed: false)
+session.observe(lidClosed: true)
+session.cancel()
+check(!session.observe(lidClosed: false), "disabling mode cancels automatic stop")
+session.begin(lidClosed: false)
+check(session.requestStop() && session.needsStop, "monitor failure ends one-shot session safely")
+check(!session.requestStop(), "repeated failure does not issue repeated shutdowns")
+print("\(checks) wake-once checks passed")
