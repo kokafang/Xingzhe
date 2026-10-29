@@ -2,7 +2,7 @@
 
 # Xingzhe · 醒着
 
-Keep your Mac awake with one menu bar switch.
+Keep your Mac awake from the menu bar.
 
 Xingzhe is a small native macOS utility built with Swift and AppKit. It lives in the menu bar, with no regular window or Dock icon.
 
@@ -18,18 +18,21 @@ Xingzhe is a small native macOS utility built with Swift and AppKit. It lives in
 
 1. Download the ZIP from [Releases](https://github.com/kokafang/Xingzhe/releases/latest) and extract it.
 2. Move **醒着.app** to **Applications**, then open it.
-3. Click the moon icon in the menu bar and turn on **保持清醒** (Keep Awake).
+3. Click the moon icon in the menu bar and turn on **一直醒着** (Stay Awake) or **只醒一次** (Wake Once).
 4. If macOS requests approval, allow Xingzhe / 醒着 under **System Settings → General → Login Items & Extensions**, then turn on the switch again. On some macOS versions, the page is called **Login Items**.
 
 For an older unsigned release, download the latest notarized version. macOS may still show its normal first-open confirmation for an app downloaded from the internet.
 
 The sun icon means Keep Awake is enabled; the moon means it is disabled. The app requests login startup on its first launch, but **Keep Awake starts off each time the app launches**. Turn it off and quit the app before removing it.
 
-## Wake Once
+## Awake modes
 
-Enable **只醒一次** (Wake Once), then manually enable Keep Awake. Closing the lid keeps the session running; the following lid opening turns Keep Awake off and restores the original power setting. The next session requires another manual activation.
+The two switches are mutually exclusive. Either switch directly starts its mode; both can be off:
 
-The preference persists and defaults to off; it never enables Keep Awake by itself. Enabling the preference during an active session begins tracking from the current lid state. Disabling it only cancels automatic stopping. An unreadable lid sensor blocks one-shot activation; monitoring failure ends an active one-shot session. This mode requires a MacBook with a readable lid sensor.
+- **一直醒着** (Stay Awake): keep running until manually switched off.
+- **只醒一次** (Wake Once): keep running immediately, then turn off on the first lid opening after a lid close. The next session needs another manual activation.
+
+Selecting the other mode keeps the current helper session and original recovery journal. Both switches start off after relaunch. Wake Once requires a readable MacBook lid sensor; missing detection prevents activation and monitoring failure ends the one-shot session.
 
 Restoration preserves the original settings: another app may still prevent sleep. Physical lid behavior needs verification on the target Mac.
 

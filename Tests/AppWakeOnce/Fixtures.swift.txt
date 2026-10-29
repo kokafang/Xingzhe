@@ -44,7 +44,13 @@ final class FakeLidMonitor {
     var onFailure: ((String) -> Void)?
     var closed = false
     var monitoring = false
-    func start() throws -> Bool { monitoring = true; return closed }
+    var failStart = false
+    func start() throws -> Bool {
+        monitoring = false
+        if failStart { throw AwakeError(text: "TEST: lid setup failed") }
+        monitoring = true
+        return closed
+    }
     func stop() { monitoring = false }
     func emit(_ closed: Bool) {
         self.closed = closed

@@ -9,6 +9,7 @@ Source anchors are intentionally strict: refactors must update this adapter.
 """
 from pathlib import Path
 import subprocess
+import re
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
@@ -24,14 +25,14 @@ callbacks = launch[launch.index('        lidMonitor.onChange ='):launch.index(' 
 source = source[:start] + '    func installTestCallbacks() {\n' + callbacks + '    }\n\n' + source[end:]
 start = source.index('    private func buildMenu()')
 end = source.index('    @objc private func onceChanged()', start)
-source = source[:start] + '''    private var testMessage = ""
-    private func render(_ message: String? = nil) {
-        testMessage = message ?? ""
-        toggle.state = enabled ? .on : .off
-        onceToggle.state = onlyOnce ? .on : .off
-    }
-
-''' + source[end:]
+render_source = source[source.index('    private func render(', start):end]
+# Keep the actual production state assignments: the test must catch two switches
+# accidentally rendered on together, rather than reproducing expected logic.
+switch_states = re.findall(r'^        (?:onceToggle|toggle)\.state = .+$', render_source, re.MULTILINE)
+assert len(switch_states) == 2, "Expected two production switch state assignments"
+source = source[:start] + ('    private var testMessage = ""\n'
+    '    private func render(_ message: String? = nil) {\n'
+    '        testMessage = message ?? ""\n' + '\n'.join(switch_states) + '\n    }\n\n') + source[end:]
 source = source.replace('import AppKit\nimport ServiceManagement\n', 'import Foundation\n')
 source = source.replace('NSObject, NSApplicationDelegate', 'NSObject')
 for old, new in {

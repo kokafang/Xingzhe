@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- Make “一直醒着” and “只醒一次” mutually exclusive, independently enabled modes; either switch starts its mode directly and both can be off.
+- Turn the one-shot switch off after lid reopening; start both switches off after relaunch.
+- Preserve the original power restoration record when switching between modes.
+
 ## 1.2.0
 
 - Add a persistent opt-in “只醒一次” (Wake Once) switch. Each manual Keep Awake activation covers one lid close/open cycle; opening the lid restores the original power setting and turns Keep Awake off.

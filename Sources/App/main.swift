@@ -8,7 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let lidMonitor = LidMonitor()
     private var onceSession = WakeOnceSession()
     private var automaticStopMessage: String?
-    private var onlyOnce = UserDefaults.standard.bool(forKey: "wakeOnceEnabled")
+    // Session mode, not a persisted preference: launch always starts with both off.
+    private var onlyOnce = false
     private let detail = NSTextField(wrappingLabelWithString: "已关闭 · 使用原有系统设置")
     private let client = ServiceClient()
     private let idle = IdleGuard()
@@ -93,19 +94,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let menu = NSMenu()
         let root = NSView(frame: NSRect(x: 0, y: 0, width: 290, height: 132))
-        let label = NSTextField(labelWithString: "保持清醒")
+        let label = NSTextField(labelWithString: "一直醒着")
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.frame = NSRect(x: 18, y: 96, width: 180, height: 23)
         toggle.frame = NSRect(x: 230, y: 93, width: 44, height: 28)
         toggle.target = self; toggle.action = #selector(toggleChanged)
-        toggle.setAccessibilityLabel("保持清醒")
+        toggle.setAccessibilityLabel("一直醒着")
+        toggle.toolTip = "保持运行，直到手动关闭。与只醒一次互斥。"
         let onceLabel = NSTextField(labelWithString: "只醒一次")
-        onceLabel.font = .systemFont(ofSize: 13)
+        onceLabel.font = .systemFont(ofSize: 14, weight: .medium)
         onceLabel.frame = NSRect(x: 18, y: 58, width: 180, height: 23)
         onceToggle.frame = NSRect(x: 230, y: 55, width: 44, height: 28)
         onceToggle.target = self; onceToggle.action = #selector(onceChanged)
         onceToggle.setAccessibilityLabel("只醒一次，合盖后再次开盖自动关闭醒着")
-        onceToggle.toolTip = "手动开启醒着后，合盖运行；再次开盖自动关闭醒着。"
+        onceToggle.toolTip = "开启即保持运行；合盖后再次开盖自动关闭。与一直醒着互斥。"
         root.addSubview(onceLabel); root.addSubview(onceToggle)
         detail.font = .systemFont(ofSize: 11)
         detail.textColor = .secondaryLabelColor
@@ -126,29 +128,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AwakeLog.app.notice("状态：\(message, privacy: .public)")
         }
         lastDiagnostic = message ?? ""
-        toggle.state = enabled ? .on : .off
+        toggle.state = enabled && !onlyOnce ? .on : .off
         toggle.isEnabled = !busy
-        onceToggle.state = onlyOnce ? .on : .off
+        onceToggle.state = enabled && onlyOnce ? .on : .off
         onceToggle.isEnabled = !busy
         statusItem.button?.image = NSImage(systemSymbolName: enabled ? "sun.max.fill" : "moon.zzz",
                                           accessibilityDescription: enabled ? "醒着：已开启" : "醒着：已关闭")
         statusItem.button?.image?.isTemplate = true
         statusItem.button?.toolTip = enabled ? "醒着 · 保持清醒已开启" : "醒着 · 已关闭"
-        let standard = enabled ? "已开启 · 保持运行，抑制自动锁屏" : "已关闭 · 使用原有系统设置"
-        let onceHint = enabled ? "本次已开启 · 合盖后开盖自动关闭" : "只醒一次 · 请手动开启醒着"
-        detail.stringValue = message ?? (onlyOnce ? onceHint : standard)
+        let standard = enabled ? "一直醒着 · 手动关闭后恢复原设置" : "已关闭 · 使用原有系统设置"
+        let onceHint = "只醒一次 · 合盖后开盖自动关闭"
+        detail.stringValue = message ?? (enabled && onlyOnce ? onceHint : standard)
     }
 
     @objc private func onceChanged() {
         guard !busy else { return }
-        let desired = onceToggle.state == .on
-        if desired && enabled {
-            do { try beginOnceTracking() }
-            catch { render(error.localizedDescription); return }
-        } else { cancelOnceTracking() }
-        onlyOnce = desired
-        UserDefaults.standard.set(desired, forKey: "wakeOnceEnabled")
-        render()
+        if onceToggle.state == .on { enableMode(once: true) }
+        else { change(false) }
     }
 
     private func beginOnceTracking() throws {
@@ -174,7 +170,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleChanged() {
         guard !busy else { return }
-        if enabled { change(false); return }
+        if toggle.state == .on { enableMode(once: false) }
+        else { change(false) }
+    }
+
+    private func enableMode(once: Bool) {
+        if enabled {
+            // Change only the ending condition; keep the same helper session and
+            // original recovery journal while moving between the two modes.
+            guard onlyOnce != once else { render(); return }
+            if once {
+                do { try beginOnceTracking() }
+                catch { render(error.localizedDescription); return }
+            } else { cancelOnceTracking() }
+            onlyOnce = once
+            render()
+            return
+        }
+        onlyOnce = once
         do {
             if daemon.status == .notRegistered || daemon.status == .notFound { try daemon.register() }
             if daemon.status == .requiresApproval {
