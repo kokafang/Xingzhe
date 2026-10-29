@@ -4,20 +4,20 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>醒着</title>
         <item>
-            <title>1.2.0</title>
-            <pubDate>Thu, 29 Oct 2026 15:32:26 +0800</pubDate>
+            <title>1.2.1</title>
+            <pubDate>Thu, 29 Oct 2026 15:54:55 +0800</pubDate>
             <link>https://github.com/kokafang/Xingzhe</link>
             <sparkle:fullReleaseNotesLink>https://github.com/kokafang/Xingzhe/releases</sparkle:fullReleaseNotesLink>
-            <sparkle:version>8</sparkle:version>
-            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:version>9</sparkle:version>
+            <sparkle:shortVersionString>1.2.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>醒着 1.2.0</h2><ul><li>新增「只醒一次」开关：手动开启醒着，合盖运行，再次开盖自动关闭醒着。</li><li>下次合盖前需重新手动开启；「只醒一次」的选择会保留。</li><li>支持开启过程中的合盖/开盖变化；检测失败时结束本次醒着。</li></ul>
+            <description><![CDATA[<h2>醒着 1.2.1</h2><ul><li>「一直醒着」和「只醒一次」互斥，打开其中一个即可直接生效，也可以都关闭。</li><li>「只醒一次」合盖后再次开盖会自动关闭；下次需要时再手动开启。</li><li>模式切换保留原始恢复设置；重新启动时两个开关都关闭。</li></ul>
 ]]></description>
-            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.2.0/Xingzhe-1.2.0-macOS-arm64.zip" length="2777678" type="application/octet-stream" sparkle:edSignature="LZrgNFkb2+8N7B33gMEXM5WD2QE2QpFBjifBXTKWViCvlmBfpK1G0MLhxoUWYiDX5Sd6+AA5gMrutxz59hLeAQ=="></enclosure>
+            <enclosure url="https://github.com/kokafang/Xingzhe/releases/download/v1.2.1/Xingzhe-1.2.1-macOS-arm64.zip" length="2777934" type="application/octet-stream" sparkle:edSignature="//9u3w7K2BStZcXMYP4ceub7m3QJSz7JTIegymCHf9yZTX35iQEkPHqen7UvyPVWbNdXgjxq0XcLDBYaRGQrAA=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: tFd1XG7MoxqfiieKTKSYZBdIOeIw7hebSpieAt4p1+JaWe6FKcnHATG606s0QvXWFbZwnn9GZP5GrkZrBECjDA==
-length: 1679
+edSignature: 7s5/V+qCq3Xq9vij0Vvjsig7ddqZyWLMZMHHimIx4jKlhKqs7pKmQCpSyHxfRiVdi1uSNG5EaHGZw8G5o09jBw==
+length: 1693
 -->
